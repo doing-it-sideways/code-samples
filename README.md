@@ -14,11 +14,11 @@ Code is from the original engine made from 2021-2022.
 - C++
 - Custom Engine
 
-## Game Feel (DES365) Projects
+## Game Feel (DigiPen DES365) Projects
 - Godot
   - GDScript
 
-## Technical Design (DES315) Projects
+## Technical Design (DigiPen DES315) Projects
 - Godot
   - C++
   - C#
