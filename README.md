@@ -1,5 +1,5 @@
 # Code Samples
-I'm in the process of uploading the code snippets. Some files may not yet be uploaded.
+I'm in the process of uploading the code snippets. Finding and transferring the files from my laptop is taking longer than expected, some files may not yet be uploaded.
 Snippets of code from different projects I've worked on over time. Code is separated into folders for each project.
 
 ## Gameboy Emulator
