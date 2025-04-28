@@ -30,3 +30,8 @@ Credit to TheCherno for some of the inspiration behind the abstractions.
   - C++
   - C#
   - GDScript
+ 
+## Audio Programming (DigiPen CS245) Projects
+- C++
+  - PortAudio
+  - PortMidi
