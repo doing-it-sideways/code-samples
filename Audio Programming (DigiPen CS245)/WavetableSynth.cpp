@@ -8,7 +8,7 @@
 *****************************************************************************/
 
 #include <array>
-#include <mutex> <-- each function in WavetableSynth locks a mutex, not shown
+#include <mutex> //<-- each function in WavetableSynth locks a mutex, not shown
 
 #include "MidiIn.h"
 #include "AudioData.h"
@@ -111,7 +111,7 @@ private:
     void UpdateMultipliers() {
         float vibratoOffset = ...;
 
-        update each note's pitch offset with the pitchWheelOffset and vibratoOffset
+        update each notes pitch offset with the pitchWheelOffset and vibratoOffset
     }
 
     std::array<Note, maxNotes> notes{};
