@@ -4,7 +4,7 @@
 	this code and using it to cheat in the class.
 
   Author(s): Evan O'Bryant
-  Copyright © 2022 DigiPen (USA) Corporation.    
+  Copyright © 2023 DigiPen (USA) Corporation.    
 *****************************************************************************/
 
 #define WIN32_LEAN_AND_MEAN
