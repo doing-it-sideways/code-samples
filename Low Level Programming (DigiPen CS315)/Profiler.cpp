@@ -6,7 +6,7 @@
 	incorrect.
 
 	Author(s): Evan O'Bryant
-	Copyright © 2022 DigiPen (USA) Corporation.    
+	Copyright © 2023 DigiPen (USA) Corporation.    
 *****************************************************************************/
 
 #include <atomic>
