@@ -4,7 +4,7 @@
   Lots of syntax is incorrect on purpose to convey the structure, rather than specifics.
 
   Author(s): Evan O'Bryant
-  Copyright © 2022 DigiPen (USA) Corporation.    
+  Copyright © 2023 DigiPen (USA) Corporation.    
 *****************************************************************************/
 
 // A custom allocator that allocates data using malloc/free
