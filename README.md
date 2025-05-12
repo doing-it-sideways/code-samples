@@ -10,7 +10,7 @@ While working on a complete engine remake of Cyber Slayer, I realized I needed t
 The main namespace used is called "cyber" but there is nothing directly related to Cyber Slayer in these samples.
 Credit to TheCherno for some of the inspiration behind the abstractions.
 - C++
-- OpenGL (GLFW)
+- OpenGL, GLFW, GLM, glad 2
 
 ## One in a Krillion
 - Unity
