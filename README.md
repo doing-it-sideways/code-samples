@@ -4,6 +4,8 @@ Snippets of code from different projects I've worked on over time. Code is separ
 
 ## Gameboy Emulator
 The repository for this project is fully public, please check it out [here](https://github.com/doing-it-sideways/gameboy-emulator).
+- C++
+- OpenGL, GLFW, GLM, glad 2, Dear ImGUI
 
 ## Renderer Project
 While working on a complete engine remake of Cyber Slayer, I realized I needed to learn graphics programming, so these files have some abstractions of common renderer objects like VBOs, VAOs, RenderBuffers, etc.
@@ -19,7 +21,7 @@ Credit to TheCherno for some of the inspiration behind the abstractions.
 ## Cyber Slayer
 Code is from the original engine made from 2021-2022.
 - C++
-- Custom Engine
+- Custom Engine: OpenGL, GLFW, GLM, glad, FMOD, Dear ImGUI, ... (among others)
 
 ## Game Feel (DigiPen DES365) Projects
 - Godot
