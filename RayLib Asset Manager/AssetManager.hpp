@@ -16,7 +16,11 @@ concept IsAnyOf = (std::same_as<T, ValidTypes> || ...);
 struct ModelAnimationInfo {
 	ModelAnimation* pData = nullptr;
 	int count = 0;
+
 	int curFrame = 0;
+	float curFrameTime = 0;
+	float fps = 1.f / 60;
+	float speedMult = 1;
 };
 
 struct MaterialInfo {
@@ -59,6 +63,12 @@ public:
 	template <RayLibAsset AssetType>
 	auto& get(std::string_view assetName);
 
+	template <RayLibAsset AssetType>
+	std::size_t get_index(std::string_view assetName);
+
+	template <RayLibAsset AssetType>
+	auto& get_from_index(std::size_t index);
+
 	void unload_all();
 
 private:
@@ -82,18 +92,24 @@ private:
 		}
 	};
 
+	using AssetMap = std::unordered_map<std::string, std::size_t, StringHash, std::equal_to<>>;
+	
 	template <typename T>
-	using AssetMap = std::unordered_map<std::string, T, StringHash, std::equal_to<>>;
+	using AssetVec = std::vector<T>;
 
-	// c++29 in-file reflection could make all this automagically define itself
-	// but not for now :(
-	AssetMap<Texture> m_Textures{};
-	AssetMap<Font> m_Fonts{};
-	AssetMap<Model> m_Models{};
-	AssetMap<ModelAnimationInfo> m_ModelAnims{};
-	AssetMap<MaterialInfo> m_Materials{};
-	AssetMap<Sound> m_Sounds{};
-	AssetMap<Music> m_Music{};
+#define ASSET_COLLECTION(Type, Name) \
+	AssetMap m_##Name##Map{}; \
+	AssetVec<Type> m_##Name##Vec{}
+
+	ASSET_COLLECTION(Texture, Textures);
+	ASSET_COLLECTION(Font, Fonts);
+	ASSET_COLLECTION(Model, Models);
+	ASSET_COLLECTION(ModelAnimationInfo, ModelAnims);
+	ASSET_COLLECTION(MaterialInfo, Materials);
+	ASSET_COLLECTION(Sound, Sounds);
+	ASSET_COLLECTION(Music, Music);
+
+#undef ASSET_COLLECTION
 };
 
 #include "AssetManager.cxx"
