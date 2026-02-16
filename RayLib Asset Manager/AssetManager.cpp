@@ -49,6 +49,16 @@ void AssetManager::load_all(const fs::path& baseDirectory,
 	}
 }
 
+#define LOAD_AND_EMPLACE(Name, LoadFunc) \
+	m_##Name##Vec.emplace_back(LoadFunc(pathStr.c_str())); \
+	m_##Name##Map[assetName] = m_##Name##Vec.size() - 1
+
+#define LOAD_INFO_AND_EMPLACE(Type, Name, LoadFunc) \
+	Type info; \
+	info.pData = LoadFunc(pathStr.c_str(), &info.count); \
+	m_##Name##Vec.push_back(std::move(info)); \
+	m_##Name##Map[assetName] = m_##Name##Vec.size() - 1
+
 void AssetManager::Load(const fs::path& path) {
 	auto extension = path.extension().string();
 	std::ranges::transform(extension, extension.begin(), [](auto c) {
@@ -58,50 +68,41 @@ void AssetManager::Load(const fs::path& path) {
 	auto pathStr = path.string();
 	auto assetName = path.stem().string();
 
-#define LOAD_AND_EMPLACE(Map, LoadFunc) \
-	auto asset = LoadFunc(pathStr.c_str()); \
-	Map[assetName] = asset
-
-#define LOAD_INFO_AND_EMPLACE(Type, Map, LoadFunc) \
-	Type info; \
-	info.pData = LoadFunc(pathStr.c_str(), &info.count); \
-	Map[assetName] = info
-
 	// Texture
 	if (extension == ".png" || extension == ".bmp" || extension == ".tga" ||
 		extension == ".jpg" || extension == ".jpeg" || extension == ".gif" ||
 		extension == ".pic" || extension == ".ppm" || extension == ".psd")
 	{
-		LOAD_AND_EMPLACE(m_Textures, LoadTexture);
+		LOAD_AND_EMPLACE(Textures, LoadTexture);
 	}
 	// Font
 	else if (extension == ".ttf" || extension == ".otf" ||
 			 extension == ".fnt" || extension == ".bdf")
 	{
-		LOAD_AND_EMPLACE(m_Fonts, LoadFont);
+		LOAD_AND_EMPLACE(Fonts, LoadFont);
 	}
 	// Model + AnimData
 	else if (extension == ".obj" || extension == ".iqm" || extension == ".glb" ||
 			 extension == ".gltf" || extension == ".vox" || extension == ".m3d")
 	{
-		LOAD_AND_EMPLACE(m_Models, LoadModel);
+		LOAD_AND_EMPLACE(Models, LoadModel);
 
 		if (extension == ".iqm" || extension == ".m3d" ||
 			extension == ".gltf" || extension == ".glb")
 		{
-			LOAD_INFO_AND_EMPLACE(ModelAnimationInfo, m_ModelAnims, LoadModelAnimations);
+			LOAD_INFO_AND_EMPLACE(ModelAnimationInfo, ModelAnims, LoadModelAnimations);
 		}
 	}
 	// Materials
 	else if (extension == ".mtl")
 	{
-		LOAD_INFO_AND_EMPLACE(MaterialInfo, m_Materials, LoadMaterials);
+		LOAD_INFO_AND_EMPLACE(MaterialInfo, Materials, LoadMaterials);
 	}
 	// Sound
 	else if (extension == ".wav" || extension == ".ogg" || extension == ".mp3" ||
 			 extension == ".qoa" || extension == ".flac")
 	{
-		LOAD_AND_EMPLACE(m_Sounds, LoadSound);
+		LOAD_AND_EMPLACE(Sounds, LoadSound);
 	}
 	else
 	{
@@ -122,7 +123,7 @@ void AssetManager::LoadMusic(const fs::path& path) {
 		extension == ".qoa" || extension == ".flac" || extension == ".xm" ||
 		extension == ".mod")
 	{
-		LOAD_AND_EMPLACE(m_Music, LoadMusicStream);
+		LOAD_AND_EMPLACE(Music, LoadMusicStream);
 	}
 	else
 	{
@@ -134,27 +135,29 @@ void AssetManager::LoadMusic(const fs::path& path) {
 #undef LOAD_AND_EMPLACE
 
 void AssetManager::unload_all() {
-#define UNLOAD_MAP(Map, UnloadFunc) \
-	for (auto& [_, asset] : Map) { \
+#define UNLOAD_COLLECTION(Name, UnloadFunc) \
+	for (auto& asset : m_##Name##Vec) { \
 		UnloadFunc(asset); \
 	} \
-	Map.clear();
-#define UNLOAD_INFO_MAP(Map, UnloadFunc) \
-	for (auto& [_, info] : Map) { \
+	m_##Name##Vec.clear(); \
+	m_##Name##Map.clear()
+#define UNLOAD_INFO_COLLECTION(Name, UnloadFunc) \
+	for (auto& info : m_##Name##Vec) { \
 		for (int i = 0; i < info.count; ++i) { \
 			UnloadFunc(info.pData[i]); \
 		} \
 		RL_FREE(info.pData); \
 	} \
-	Map.clear();
+	m_##Name##Vec.clear(); \
+	m_##Name##Map.clear()
 
-	UNLOAD_MAP(m_Textures, UnloadTexture);
-	UNLOAD_MAP(m_Fonts, UnloadFont);
-	UNLOAD_MAP(m_Models, UnloadModel);
-	UNLOAD_MAP(m_Sounds, UnloadSound);
-	UNLOAD_MAP(m_Music, UnloadMusicStream);
-	UNLOAD_INFO_MAP(m_ModelAnims, UnloadModelAnimation);
-	UNLOAD_INFO_MAP(m_Materials, UnloadMaterial);
+	UNLOAD_COLLECTION(Textures, UnloadTexture);
+	UNLOAD_COLLECTION(Fonts, UnloadFont);
+	UNLOAD_COLLECTION(Models, UnloadModel);
+	UNLOAD_COLLECTION(Sounds, UnloadSound);
+	UNLOAD_COLLECTION(Music, UnloadMusicStream);
+	UNLOAD_INFO_COLLECTION(ModelAnims, UnloadModelAnimation);
+	UNLOAD_INFO_COLLECTION(Materials, UnloadMaterial);
 
 #undef UNLOAD_INFO_MAP
 #undef UNLOAD_MAP
