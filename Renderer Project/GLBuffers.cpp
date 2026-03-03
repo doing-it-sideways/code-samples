@@ -1,10 +1,3 @@
-/*****************************************************************************
-  Implementation of buffer abstraction functions.
-
-  Author(s): Evan O'Bryant
-  Copyright © 2024-2025 Evan O'Bryant.    
-*****************************************************************************/
-
 #include "GLBuffers.hpp"
 
 #include <cassert>
@@ -48,15 +41,28 @@ FrameBuffer::~FrameBuffer() {
 
 UniformBuffer::UniformBuffer(GLuint bindingPoint, GLsizeiptr std140Size) {
 	glGenBuffers(1, &ubo);
-	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+	Bind();
 	// just allocating data
 	glBufferData(GL_UNIFORM_BUFFER, std140Size, nullptr, GL_STATIC_DRAW);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferRange(GL_UNIFORM_BUFFER, bindingPoint, ubo, 0, std140Size);
+	Unbind();
 }
 
 UniformBuffer::~UniformBuffer() {
 	glDeleteBuffers(1, &ubo);
+}
+
+ShaderStorageBuffer::ShaderStorageBuffer(GLuint bindingPoint, GLsizeiptr std430Size) {
+	glCreateBuffers(1, &ssbo);
+	glNamedBufferStorage(ssbo, std430Size, 0, GL_DYNAMIC_STORAGE_BIT);
+
+	Bind();
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, bindingPoint, ssbo);
+	Unbind();
+}
+
+ShaderStorageBuffer::~ShaderStorageBuffer() {
+	glDeleteBuffers(1, &ssbo);
 }
 
 static constexpr GLuint GLTypeSize(GLenum type) {
@@ -185,22 +191,10 @@ void IndexBuffer::Draw(GLenum primitive, GLsizei instances) const {
 	Unbind();
 }
 
-GLuint FrameBuffer::AddTextureAttachment(GLenum attachment, GLsizei width, GLsizei height,
+GLuint FrameBuffer::AddTextureAttachment(GLenum attachment, GLsizei width, GLsizei height, 
 											   GLint filter, GLint wrap,
 											   GLint lodLevel, bool includeColorAlpha)
 {
-	// Generate texture attachment
-	GLuint fbTex;
-	glGenTextures(1, &fbTex);
-	glBindTexture(GL_TEXTURE_2D, fbTex);
-
-	// Set default parameters for texture
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter == GL_LINEAR_MIPMAP_LINEAR ? GL_LINEAR : filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
-	
-	// Deduce internal format, pixel format, and the type of the texture attachment
 	GLenum internalFormat, pixelFormat, type;
 	switch (attachment) {
 	case GL_DEPTH_STENCIL_ATTACHMENT:
@@ -214,14 +208,14 @@ GLuint FrameBuffer::AddTextureAttachment(GLenum attachment, GLsizei width, GLsiz
 		pixelFormat = GL_DEPTH_COMPONENT;
 		type = GL_UNSIGNED_BYTE;
 		break;
-	
+
 	default: // GL_COLOR_ATTACHMENT(N)
 		if (includeColorAlpha) {
-			internalFormat = GL_RGBA;
+			internalFormat = GL_RGBA32F;
 			pixelFormat = GL_RGBA;
 		}
 		else {
-			internalFormat = GL_RGB;
+			internalFormat = GL_RGB32F;
 			pixelFormat = GL_RGB;
 		}
 
@@ -229,12 +223,21 @@ GLuint FrameBuffer::AddTextureAttachment(GLenum attachment, GLsizei width, GLsiz
 		break;
 	}
 
-	glTexImage2D(GL_TEXTURE_2D, lodLevel, internalFormat, width, height, 0, pixelFormat, type, nullptr);
+	GLuint fbTex;
+	glCreateTextures(GL_TEXTURE_2D, 1, &fbTex);
+
+	glTextureStorage2D(fbTex, 1, internalFormat, width, height);
+
+	glTextureParameteri(fbTex, GL_TEXTURE_MIN_FILTER, filter);
+	glTextureParameteri(fbTex, GL_TEXTURE_MAG_FILTER, filter == GL_LINEAR_MIPMAP_LINEAR ? GL_LINEAR : filter);
+	glTextureParameteri(fbTex, GL_TEXTURE_WRAP_S, wrap);
+	glTextureParameteri(fbTex, GL_TEXTURE_WRAP_T, wrap);
+
+	//glTexImage2D(GL_TEXTURE_2D, lodLevel, internalFormat, width, height, 0, pixelFormat, type, nullptr);
 	
 	Bind();
-	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, fbTex, lodLevel);
-	
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glNamedFramebufferTexture(fbo, attachment, fbTex, lodLevel);
+	CheckComplete();
 	Unbind();
 
 	texAttachments.push_back(fbTex);
@@ -243,7 +246,6 @@ GLuint FrameBuffer::AddTextureAttachment(GLenum attachment, GLsizei width, GLsiz
 }
 
 GLuint FrameBuffer::AddRenderBufferAttachment(GLenum attachment, GLsizei width, GLsizei height, GLenum format) {
-	// Generate render attachment
 	GLuint rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -270,7 +272,7 @@ GLuint FrameBuffer::AddRenderBufferAttachment(GLenum attachment, GLsizei width, 
 
 	Bind();
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, rbo);
-	
+
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	Unbind();
 
@@ -279,13 +281,20 @@ GLuint FrameBuffer::AddRenderBufferAttachment(GLenum attachment, GLsizei width, 
 	return rbo;
 }
 
-// Makes sure that the framebuffer is a fully setup framebuffer.
 bool FrameBuffer::CheckComplete() const {
 	Bind();
 	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	Unbind();
 
 	return status == GL_FRAMEBUFFER_COMPLETE;
+}
+
+void FrameBuffer::ClearAttachments() {
+	texAttachments.clear();
+	renderAttachments.clear();
+
+	glDeleteFramebuffers(1, &fbo);
+	glGenFramebuffers(1, &fbo);
 }
 
 } // namespace cyber

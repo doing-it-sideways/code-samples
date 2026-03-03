@@ -1,12 +1,7 @@
-/*****************************************************************************
-  Implementation of template functions for shader abstraction.
-
-  Author(s): Evan O'Bryant
-  Copyright © 2024-2025 Evan O'Bryant.    
-*****************************************************************************/
-
 #include "glm/gtc/type_ptr.hpp"
 #include "TemplateExtensions.hpp"
+
+namespace cyber {
 
 template <cyber::arithmetic... UniformVals> requires cyber::all_same<UniformVals...>
 const Shader& Shader::Set(std::string_view valName, UniformVals... vals) const {
@@ -17,8 +12,6 @@ const Shader& Shader::Set(std::string_view valName, UniformVals... vals) const {
 	static_assert(valNum >= 1 && valNum <= 4,
 				  "1 <= arguments <= 4 to set a glsl single or vector type.");
 
-	// based on amount of arguments passed in, will either try to call glUniform1f
-	// or will convert to a glm::vec and set the shader value through that function.
 	if constexpr (valNum == 1) {
 		GLuint loc = GetUniformLocation(valName);
 		// even though 1 arg, still have to expand pack
@@ -41,8 +34,6 @@ const Shader& Shader::Set(std::string_view vecName, const glm::vec<L, UniformVal
 
 	GLuint loc = GetUniformLocation(vecName);
 
-	// rather than copy-pasting the same 2-3 lines of code for many function overrides,
-	// use if constexpr to have compiler generate the right branch at compile time.
 	if constexpr (std::is_floating_point_v<UniformVal>) {
 		if constexpr (L == 2)
 			glUniform2f(loc, vec.x, vec.y);
@@ -112,3 +103,5 @@ const Shader& Shader::Set(std::string_view matName, const glm::mat<C, R, T, Q>& 
 
 	return *this;
 }
+
+} // namespace cyber

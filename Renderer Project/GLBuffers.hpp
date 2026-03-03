@@ -1,10 +1,3 @@
-/*****************************************************************************
-  Abstractions for different OpenGL buffer types.
-
-  Author(s): Evan O'Bryant
-  Copyright © 2024-2025 Evan O'Bryant.    
-*****************************************************************************/
-
 #pragma once
 
 #include <glad/gl.h>
@@ -18,14 +11,16 @@
 #include "ClassConstructorMacros.hpp"
 #include "ConceptExtensions.hpp"
 
-class Shader;
-
 namespace cyber {
 
-// vbo abstraction
+class Shader;
+
+//struct AttributeLayout;
+
 struct VertexBuffer {
 	GLuint vbo = 0;
 
+	// GL_STATIC_DRAW, GL_STREAM_DRAW, GL_DYNAMIC_DRAW
 	template <std140 T>
 	VertexBuffer(const T* buffer, GLuint bufSize, GLenum drawType = GL_STATIC_DRAW);
 
@@ -43,7 +38,6 @@ struct VertexBuffer {
 
 	template <std140 T>
 	VertexBuffer(const VertexBuffer&);
-
 	template <std140 T>
 	VertexBuffer& operator=(const VertexBuffer&);
 
@@ -60,7 +54,6 @@ private:
 	GLuint _elements = 0;
 };
 
-// ebo abstraction 
 struct IndexBuffer {
 	GLuint ebo = 0;
 
@@ -95,7 +88,6 @@ private:
 	GLenum _type;
 };
 
-// lays out how attributes look in a vertex buffer. credit to TheCherno for inspiration
 struct AttributeLayout {
 	friend struct VertexArray;
 
@@ -127,7 +119,6 @@ private:
 	GLuint _instanceSeparation;
 };
 
-// vao abstraction. requires an AttributeLayout to be created in order to set attributes
 struct VertexArray {
 	GLuint vao = 0;
 
@@ -155,7 +146,6 @@ private:
 	GLuint _attributes = 0;
 };
 
-// fbo abstraction. supports any number of texture attachments & render attachments
 struct FrameBuffer {
 	GLuint fbo = 0;
 
@@ -175,6 +165,8 @@ struct FrameBuffer {
 									  GLint lodLevel = 0, bool includeColorAlpha = true);
 	GLuint AddRenderBufferAttachment(GLenum attachment, GLsizei width, GLsizei height, GLenum format = 0);
 
+	void ClearAttachments();
+
 	bool CheckComplete() const;
 
 private:
@@ -182,29 +174,21 @@ private:
 	std::vector<GLuint> renderAttachments{};
 };
 
-// ubo abstraction. contains standalone functions to calculate the std140 size of an object
 struct UniformBuffer {
 	GLuint ubo;
 
-	// calcs size in std140 for any type meeting the std140 compliant type
-	template <std140 T, std::size_t ArrLen = 0>
+	template <std140 T>
 	static constexpr GLsizeiptr Getstd140Size();
 
-	// glm::vec version
 	template <std140 T, glm::length_t L, glm::qualifier Q>
 	static constexpr GLsizeiptr Getstd140Size();
 
-	// glm::mat version
 	template <std140 T, glm::length_t C, glm::length_t R, glm::qualifier Q>
 	static constexpr GLsizeiptr Getstd140Size();
 
-	// originally was going to try and allow any class type, but would require reflection.
-	// saving for c++26
 	/*template <class Class>
 	UniformBuffer(Class c);*/
 
-	// helper function -- pass any amount of types and the full std140 size of all objects
-	// will be returned
 	template <std140... UniformVals>
 	static constexpr GLsizeiptr Calcstd140Size();
 
@@ -221,7 +205,43 @@ struct UniformBuffer {
 	inline void Unbind() const { glBindBuffer(GL_UNIFORM_BUFFER, 0); }
 
 	template <std140 UniformVal>
-	const UniformBuffer& Set(UniformVal value, GLintptr offset) const;
+	const UniformBuffer& Set(const UniformVal& value, GLintptr offset) const;
+
+	template <std140 UniformVal>
+	const UniformBuffer& Set(const UniformVal* pValue, GLintptr offset) const;
+};
+
+struct ShaderStorageBuffer {
+	GLuint ssbo;
+
+	template <std430 T>
+	static constexpr GLsizeiptr Getstd430Size();
+
+	template <std430 T, glm::length_t L, glm::qualifier Q>
+	static constexpr GLsizeiptr Getstd430Size();
+
+	template <std430 T, glm::length_t C, glm::length_t R, glm::qualifier Q>
+	static constexpr GLsizeiptr Getstd430Size();
+
+	template <std430... DataVals>
+	static constexpr GLsizeiptr Calcstd430Size();
+
+	ShaderStorageBuffer(GLuint bindingPoint, GLsizeiptr std430Size);
+	~ShaderStorageBuffer();
+
+	DEFAULT_COPY(ShaderStorageBuffer, delete);
+	DEFAULT_MOVE(ShaderStorageBuffer, default);
+
+	inline operator GLuint() { return ssbo; }
+
+	inline void Bind() const { glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo); }
+	inline void Unbind() const { glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); }
+
+	template <std430 DataVal>
+	const ShaderStorageBuffer& Set(const DataVal& value, GLintptr offset) const;
+
+	template <std430 DataVal>
+	const ShaderStorageBuffer& Set(const DataVal* pValue, GLintptr offset) const;
 };
 
 } // namespace cyber

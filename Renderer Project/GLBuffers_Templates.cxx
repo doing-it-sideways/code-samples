@@ -1,9 +1,3 @@
-/*****************************************************************************
-  Implementation of templated buffer functionns.
-
-  Author(s): Evan O'Bryant
-  Copyright © 2024-2025 Evan O'Bryant.    
-*****************************************************************************/
 
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
@@ -114,7 +108,7 @@ constexpr AttributeLayout& AttributeLayout::AddNamedAttribute(std::string_view n
 	return *this;
 }
 
-template <std140 T, std::size_t ArrLen>
+template <std140 T>
 static constexpr GLsizeiptr UniformBuffer::Getstd140Size() {
 	if constexpr (std::is_class_v<T>) {
 		if constexpr (is_glm_vec<T>::value) {
@@ -126,11 +120,12 @@ static constexpr GLsizeiptr UniformBuffer::Getstd140Size() {
 			return Getstd140Size<T, matT::cols, matT::rows, matT::qual>();
 		}
 
-		return 0;
-		// TODO: Add support for generic classes?
+		return 0; // class types not yet supported
 	}
-	else if constexpr (std::is_array_v<T>)
-		return 16 * ArrLen; // 4N * Size
+	else if constexpr (is_bounded_array<T>::value) {
+		using arrT = is_bounded_array<T>;
+		return 16 * arrT::len; // 4N * Size
+	}
 	else
 		return 4;
 }
@@ -159,7 +154,7 @@ static constexpr GLsizeiptr UniformBuffer::Calcstd140Size() {
 }
 
 template <std140 UniformVal>
-const UniformBuffer& UniformBuffer::Set(UniformVal value, GLintptr offset) const {
+const UniformBuffer& UniformBuffer::Set(const UniformVal& value, GLintptr offset) const {
 	Bind();
 
 	if constexpr (is_glm_vec<UniformVal>::value || is_glm_mat<UniformVal>::value)
@@ -169,7 +164,67 @@ const UniformBuffer& UniformBuffer::Set(UniformVal value, GLintptr offset) const
 		glBufferSubData(GL_UNIFORM_BUFFER, offset, Getstd140Size<UniformVal>(), &value);
 
 	Unbind();
+	return *this;
+}
 
+template <std140 UniformVal>
+const UniformBuffer& UniformBuffer::Set(const UniformVal* pValue, GLintptr offset) const {
+	if constexpr (is_glm_vec<UniformVal>::value || is_glm_mat<UniformVal>::value)
+		return Set(*pValue, offset);
+	
+	Bind();
+	glBufferSubData(GL_UNIFORM_BUFFER, offset, Getstd140Size<UniformVal>(), pValue);
+	Unbind();
+	return *this;
+}
+
+template <std430 T>
+static constexpr GLsizeiptr ShaderStorageBuffer::Getstd430Size() {
+	if constexpr (is_bounded_array<T>::value) {
+		using arrT = is_bounded_array<T>;
+		return 4 * arrT::len;
+	}
+	else
+		return UniformBuffer::Getstd140Size<T>();
+}
+
+template <std430 T, glm::length_t L, glm::qualifier Q>
+static constexpr GLsizeiptr ShaderStorageBuffer::Getstd430Size() {
+	return UniformBuffer::Getstd140Size<T, L, Q>();
+}
+
+template <std430 T, glm::length_t C, glm::length_t R, glm::qualifier Q>
+static constexpr GLsizeiptr ShaderStorageBuffer::Getstd430Size() {
+	return UniformBuffer::Getstd140Size<T, C, R, Q>();
+}
+
+template <std430... DataVals>
+static constexpr GLsizeiptr ShaderStorageBuffer::Calcstd430Size() {
+	return (0 + ... + Getstd430Size<DataVals>());
+}
+
+template <std430 DataVal>
+const ShaderStorageBuffer& ShaderStorageBuffer::Set(const DataVal& value, GLintptr offset) const {
+	Bind();
+
+	if constexpr (is_glm_vec<DataVal>::value || is_glm_mat<DataVal>::value)
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset,
+						Getstd430Size<DataVal>(), glm::value_ptr(value));
+	else
+		glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, Getstd430Size<DataVal>(), &value);
+
+	Unbind();
+	return *this;
+}
+
+template <std430 DataVal>
+const ShaderStorageBuffer& ShaderStorageBuffer::Set(const DataVal* pValue, GLintptr offset) const {
+	if constexpr (is_glm_vec<DataVal>::value || is_glm_mat<DataVal>::value)
+		return Set(*pValue, offset);
+
+	Bind();
+	glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, Getstd430Size<DataVal>(), pValue);
+	Unbind();
 	return *this;
 }
 
